@@ -55,25 +55,33 @@ def word_length_threshold(training_file, development_file):
     the training and development data. Print out evaluation results."""
     train_words, true_labels = load_file(training_file)
 
-    f_scores_evalations = []
-    word_sizes = set()
+    word_sized_labels = {}
 
+    best_fscore = 0
+    best_thresh = 0
+
+    # Initial For loop
     for word in train_words:
+        if len(word) not in word_sized_labels.keys():
+            word_sized_labels[len(word)] = []
 
-        word_sizes.add(len(word))
+    for word_size in word_sized_labels.keys():
+        for word in train_words:
+            word_sized_labels[word_size].append(int(len(word) >= word_size))
 
-
-
-
-    best_threshold_found = False
-
-    while best_threshold_found:
-
+        predicted_labels = word_sized_labels[word_size]
+        fscore = get_fscore(predicted_labels,true_labels)
+        if fscore > best_fscore:
+            best_thresh = word_size
 
     development_words, true_labels = load_file(development_file)
 
+    predicted_labels = []
+    for word in train_words:
+        word_sized_labels[best_thresh].append(int(len(word) >= best_thresh))
+    evaluate(predicted_labels, true_labels)
 
-    pass
+
 
 
 ### 2.3: Word frequen  cy thresholding
