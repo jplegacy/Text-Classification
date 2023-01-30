@@ -7,21 +7,44 @@ Author: Kristina Striegnitz and <YOUR NAME HERE>
 Complete this file for part 1 of the project.
 """
 
+
 def get_accuracy(y_pred, y_true):
     """Calculate the accuracy of the predicted labels.
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    ## YOUR CODE HERE...
-    return accuracy
+    true_counts = 0
+
+    for index, label in enumerate(y_pred):
+        corresponding_label = y_true[index]
+        if label == corresponding_label:
+            true_counts += 1
+
+    total_labels = len(y_pred)
+
+    return true_counts/total_labels
+
 
 def get_precision(y_pred, y_true):
     """Calculate the precision of the predicted labels.
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    ## YOUR CODE HERE...
-    return precision
+
+    true_positives = 0
+    false_positives = 0
+
+    for index, label in enumerate(y_pred):
+        corresponding_label = y_true[index]
+
+        if corresponding_label and label:
+            true_positives += 1
+            continue
+        elif not corresponding_label and not false_positives:
+            false_positives += 1
+            continue
+
+    return true_positives / (true_positives+false_positives)
 
 
 def get_recall(y_pred, y_true):
@@ -29,8 +52,20 @@ def get_recall(y_pred, y_true):
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    ## YOUR CODE HERE...
-    return recall
+    true_positives = 0
+    false_negatives = 0
+
+    for index, label in enumerate(y_pred):
+        corresponding_label = y_true[index]
+
+        if corresponding_label and label:
+            true_positives += 1
+            continue
+        elif corresponding_label and not false_negatives:
+            false_negatives += 1
+            continue
+
+    return true_positives / (true_positives + false_negatives)
 
 
 def get_fscore(y_pred, y_true):
@@ -38,8 +73,10 @@ def get_fscore(y_pred, y_true):
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    ## YOUR CODE HERE...
-    return fscore
+    precision = get_precision(y_pred,y_true)
+
+    recall = get_recall(y_pred,y_true)
+    return 2*precision*recall / (precision+recall)
 
 
 def evaluate(y_pred, y_true):
@@ -48,5 +85,11 @@ def evaluate(y_pred, y_true):
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    ## YOUR CODE HERE...
+    scores = [("Accuracy",get_accuracy(y_pred,y_true)),
+              ("Precision",get_precision(y_pred,y_true)),
+              ("Recall",get_recall(y_pred,y_true)),
+              ("Fscore",get_fscore(y_pred,y_true))]
+
+    for metric in scores:
+        print(metric[0] + ": " + str(metric[1] * 100) + "%")
 

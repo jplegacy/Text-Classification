@@ -22,7 +22,7 @@ from evaluation import get_fscore, evaluate
 def load_file(data_file):
     """Load in the words and labels from the given file."""
     words = []
-    labels = []
+    labels = [],
     with open(data_file, 'rt', encoding="utf8") as f:
         i = 0
         for line in f:
@@ -39,8 +39,13 @@ def load_file(data_file):
 def all_complex(data_file):
     """Label every word as complex. Evaluate performance on given data set. Print out
     evaluation results."""
-    ## YOUR CODE HERE...
-    pass
+    words, true_labels = load_file(data_file)
+
+    evaluated_labels = []
+    for word in words:
+        evaluated_labels.append(1)
+
+    evaluate(evaluated_labels, true_labels)
 
 
 ### 2.2: Word length thresholding
@@ -48,17 +53,37 @@ def all_complex(data_file):
 def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
-    ## YOUR CODE HERE
+    train_words, true_labels = load_file(training_file)
+
+    f_scores_evalations = []
+    word_sizes = set()
+
+    for word in train_words:
+
+        word_sizes.add(len(word))
+
+
+
+
+    best_threshold_found = False
+
+    while best_threshold_found:
+
+
+    development_words, true_labels = load_file(development_file)
+
+
     pass
 
 
-### 2.3: Word frequency thresholding
+### 2.3: Word frequen  cy thresholding
 
 def load_ngram_counts(ngram_counts_file):
     """Load Google NGram counts (i.e. frequency counts for words in a
     very large corpus). Return as a dictionary where the words are the
     keys and the counts are values.
     """
+
     counts = defaultdict(int)
     with gzip.open(ngram_counts_file, 'rt') as f:
         for line in f:
@@ -72,6 +97,8 @@ def word_frequency_threshold(training_file, development_file, counts):
     threshold to classify the training and development data. Print out
     evaluation results.
     """
+    words, true_labels = load_file(training_file)
+
     ## YOUR CODE HERE
     #Find best frequency threshold
     pass
