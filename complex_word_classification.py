@@ -22,7 +22,7 @@ from evaluation import get_fscore, evaluate
 def load_file(data_file):
     """Load in the words and labels from the given file."""
     words = []
-    labels = [],
+    labels = []
     with open(data_file, 'rt', encoding="utf8") as f:
         i = 0
         for line in f:
@@ -53,35 +53,43 @@ def all_complex(data_file):
 def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
+    # Train Data
     train_words, true_labels = load_file(training_file)
 
+    best_thresh, best_sized_label_set = find_best_length_thresh(train_words, true_labels)
+
+    evaluate(best_sized_label_set, true_labels)
+
+    # Development Data
+    development_words, true_labels = load_file(development_file)
+
+    predicted_labels = []
+    for word in development_words:
+        predicted_labels.append(int(len(word) > best_thresh))
+    evaluate(predicted_labels, true_labels)
+
+def find_best_length_thresh(wordset, label_set):
     word_sized_labels = {}
 
     best_fscore = 0
     best_thresh = 0
 
-    # Initial For loop
-    for word in train_words:
+    # Loop creates data structure to store each word-size and there respective labels
+    for word in wordset:
         if len(word) not in word_sized_labels.keys():
             word_sized_labels[len(word)] = []
 
     for word_size in word_sized_labels.keys():
-        for word in train_words:
-            word_sized_labels[word_size].append(int(len(word) >= word_size))
+        for word in wordset:
+            length_condition = len(word) > word_size
+            word_sized_labels[word_size].append(int(length_condition))
 
         predicted_labels = word_sized_labels[word_size]
-        fscore = get_fscore(predicted_labels,true_labels)
+        fscore = get_fscore(predicted_labels, label_set)
         if fscore > best_fscore:
+            best_fscore = fscore
             best_thresh = word_size
-
-    development_words, true_labels = load_file(development_file)
-
-    predicted_labels = []
-    for word in train_words:
-        word_sized_labels[best_thresh].append(int(len(word) >= best_thresh))
-    evaluate(predicted_labels, true_labels)
-
-
+    return best_thresh, word_sized_labels[best_thresh]
 
 
 ### 2.3: Word frequen  cy thresholding
@@ -105,12 +113,87 @@ def word_frequency_threshold(training_file, development_file, counts):
     threshold to classify the training and development data. Print out
     evaluation results.
     """
+
     words, true_labels = load_file(training_file)
+    sorted_counts = sorted_word_counts(counts)
 
-    ## YOUR CODE HERE
-    #Find best frequency threshold
-    pass
+    best_thresh = find_best_frequency(words, true_labels, sorted_counts, counts)
+    predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
 
+    # best_thresh = 30
+    # predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
+
+    evaluate(predicted_labels, true_labels)
+
+    # Development Data
+    development_words, true_labels = load_file(development_file)
+    predicted_labels = get_frequency_predicted_labels(best_thresh,development_words,counts)
+    evaluate(predicted_labels, true_labels)
+
+
+
+def sorted_word_counts(counts):
+
+    word_counts = set()
+    for pair in counts.items():
+        word_counts.add(pair[1]) # Grabs the Count within the KV pairs
+
+    return sorted(word_counts)
+
+def find_best_frequency(words, true_labels, sorted_counts, counts):
+    PARTITION_CONSTANT = 5
+
+    # Base Case
+    if len(sorted_counts) <= PARTITION_CONSTANT:
+        best_thresh = get_middle_value(0, len(sorted_counts), sorted_counts)
+
+        return best_thresh
+
+    partition_step_size = int(len(sorted_counts)/PARTITION_CONSTANT)
+
+    # Gets partition intervals to split up sorted counts list
+    partition_intervals = []
+    for partition_itr in range(0, PARTITION_CONSTANT):
+        starting_index = (partition_itr * partition_step_size)
+        ending_index = starting_index + partition_step_size
+        partition_intervals.append((starting_index, ending_index))
+
+    # Checks each intervals middle element and finds the one with the highest fscore
+    best_interval = partition_intervals[0]
+    best_fscore = 0
+    for i, interval in enumerate(partition_intervals):
+        middle_frequency = get_middle_value(interval[0], interval[1], sorted_counts)
+        print(middle_frequency)
+        predicted_labels = get_frequency_predicted_labels(middle_frequency, words, counts)
+
+        fscore = get_fscore(predicted_labels, true_labels)
+        if fscore > best_fscore:
+            best_fscore = fscore
+            best_interval = partition_intervals[i]
+
+    sub_sorted_count_list = sorted_counts[best_interval[0]:best_interval[1]]
+
+    find_best_frequency(words, true_labels, sub_sorted_count_list, counts)
+
+
+def get_middle_value(starting, ending, list_intervals):
+    return list_intervals[int((starting + ending) / 2)]
+
+
+def get_frequency_predicted_labels(thresh, words, word_counts):
+    predicted_labels = []
+    for word in words:
+        if word_counts[word] is None:
+            predicted_labels.append(0)
+            continue
+        if thresh is None:
+            predicted_labels.append(0)
+            continue
+
+        frequency_condition = word_counts[word] > thresh
+        predicted_labels.append(int(frequency_condition))
+
+    return predicted_labels
 
 ### 3.1: Naive Bayes
 
@@ -177,7 +260,7 @@ def classifiers(training_file, development_file, counts):
     my_classifier(training_file, development_file, counts)
 
 if __name__ == "__main__":
-    training_file = "/var/csc483/complex_words_training.txt"
+    training_file = "/var/csc483/data/complex_words_training.txt"
     development_file = "/var/csc483/data/complex_words_development.txt"
     test_file = "/var/csc483/data/complex_words_test_unlabeled.txt"
 

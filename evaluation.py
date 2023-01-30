@@ -7,7 +7,6 @@ Author: Kristina Striegnitz and <YOUR NAME HERE>
 Complete this file for part 1 of the project.
 """
 
-
 def get_accuracy(y_pred, y_true):
     """Calculate the accuracy of the predicted labels.
     y_pred: list predicted labels
@@ -21,6 +20,9 @@ def get_accuracy(y_pred, y_true):
             true_counts += 1
 
     total_labels = len(y_pred)
+
+    if total_labels == 0:
+        return 0
 
     return true_counts/total_labels
 
@@ -44,6 +46,9 @@ def get_precision(y_pred, y_true):
             false_positives += 1
             continue
 
+    if true_positives+false_positives == 0:
+        return 0
+
     return true_positives / (true_positives+false_positives)
 
 
@@ -65,6 +70,9 @@ def get_recall(y_pred, y_true):
             false_negatives += 1
             continue
 
+    if true_positives + false_negatives == 0:
+        return 0
+
     return true_positives / (true_positives + false_negatives)
 
 
@@ -73,9 +81,12 @@ def get_fscore(y_pred, y_true):
     y_pred: list predicted labels
     y_true: list of corresponding true labels
     """
-    precision = get_precision(y_pred,y_true)
+    precision = get_precision(y_pred, y_true)
 
-    recall = get_recall(y_pred,y_true)
+    recall = get_recall(y_pred, y_true)
+
+    if precision+recall == 0:
+        return 0
     return 2*precision*recall / (precision+recall)
 
 
