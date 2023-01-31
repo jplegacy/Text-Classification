@@ -117,11 +117,11 @@ def word_frequency_threshold(training_file, development_file, counts):
     words, true_labels = load_file(training_file)
     sorted_counts = sorted_word_counts(counts)
 
-    best_thresh = find_best_frequency(words, true_labels, sorted_counts, counts)
-    predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
-
-    # best_thresh = 30
+    # best_thresh = find_best_frequency(words, true_labels, sorted_counts, counts)
     # predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
+
+    best_thresh = 44
+    predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
 
     evaluate(predicted_labels, true_labels)
 
@@ -202,8 +202,9 @@ def naive_bayes(training_file, development_file, counts):
     features. Print out evaluation results on the training and
     development data.
     """
-    ## YOUR CODE HERE
-    pass
+    from sklearn.naive_bayes import GaussianNB
+    clf = GaussianNB()
+    clf.fit(train_x, train_y)
 
 
 ### 3.2: Logistic Regression
