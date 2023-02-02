@@ -54,21 +54,21 @@ def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
     # Train Data
-    train_words, true_labels = load_file(training_file)
+    train_words, training_true_labels = load_file(training_file)
 
-    best_thresh, training_features = find_best_length_thresh(train_words, true_labels)
+    best_thresh, training_pred_labels = find_best_length_thresh(train_words, training_true_labels)
 
-    evaluate(training_features, true_labels)
+    evaluate(training_pred_labels, training_true_labels)
 
     # Development Data
-    development_words, true_labels = load_file(development_file)
+    development_words, dev_true_labels = load_file(development_file)
 
-    development_features = []
+    development_pred_labels = []
     for word in development_words:
-        development_features.append(int(len(word) > best_thresh))
-    evaluate(development_features, true_labels)
+        development_pred_labels.append(int(len(word) > best_thresh))
+    evaluate(development_pred_labels, dev_true_labels)
 
-    return best_thresh, training_features, development_features
+    return best_thresh, training_pred_labels, development_pred_labels
 
 
 def find_best_length_thresh(wordset, label_set):
@@ -118,23 +118,24 @@ def word_frequency_threshold(training_file, development_file, counts):
     evaluation results.
     """
 
-    words, true_labels = load_file(training_file)
+    words, training_true_labels = load_file(training_file)
     sorted_counts = sorted_word_counts(counts)
 
-    # best_thresh = find_best_frequency(words, true_labels, sorted_counts, counts)
-    # predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
+    best_thresh = find_best_frequency(words, training_true_labels, sorted_counts, counts)
+    print("Best Thresh for x ", best_thresh )
+    training_pred_labels = get_frequency_predicted_labels(best_thresh, words, counts)
 
-    best_thresh = 44
-    training_features = get_frequency_predicted_labels(best_thresh, words, counts)
+    # best_thresh = 44
+    # training_pred_labels = get_frequency_predicted_labels(best_thresh, words, counts)
 
-    evaluate(training_features, true_labels)
+    evaluate(training_pred_labels, training_true_labels)
 
     # Development Data
-    development_words, true_labels = load_file(development_file)
-    development_features = get_frequency_predicted_labels(best_thresh, development_words, counts)
-    evaluate(development_features, true_labels)
+    development_words, dev_true_labels = load_file(development_file)
+    development_pred_labels = get_frequency_predicted_labels(best_thresh, development_words, counts)
+    evaluate(development_pred_labels, dev_true_labels)
 
-    return best_thresh,training_features,development_features
+    return best_thresh, training_pred_labels, development_pred_labels
 
 
 def sorted_word_counts(counts):
@@ -145,16 +146,16 @@ def sorted_word_counts(counts):
     return sorted(word_counts)
 
 
-def find_best_frequency(words, true_labels, sorted_counts, counts):
+def find_best_frequency(words, true_labels, sorted_counts_partition, counts_dict):
     PARTITION_CONSTANT = 5
 
     # Base Case
-    if len(sorted_counts) <= PARTITION_CONSTANT:
-        best_thresh = get_middle_value(0, len(sorted_counts), sorted_counts)
+    if len(sorted_counts_partition) <= PARTITION_CONSTANT:
+        best_thresh = get_middle_value(0, len(sorted_counts_partition) - 1, sorted_counts_partition)
 
         return best_thresh
 
-    partition_step_size = int(len(sorted_counts) / PARTITION_CONSTANT)
+    partition_step_size = int(len(sorted_counts_partition) / PARTITION_CONSTANT)
 
     # Gets partition intervals to split up sorted counts list
     partition_intervals = []
@@ -167,18 +168,17 @@ def find_best_frequency(words, true_labels, sorted_counts, counts):
     best_interval = partition_intervals[0]
     best_fscore = 0
     for i, interval in enumerate(partition_intervals):
-        middle_frequency = get_middle_value(interval[0], interval[1], sorted_counts)
-        print(middle_frequency)
-        predicted_labels = get_frequency_predicted_labels(middle_frequency, words, counts)
+        middle_frequency = get_middle_value(interval[0], interval[1], sorted_counts_partition)
+        predicted_labels = get_frequency_predicted_labels(middle_frequency, words, counts_dict)
 
         fscore = get_fscore(predicted_labels, true_labels)
         if fscore > best_fscore:
             best_fscore = fscore
             best_interval = partition_intervals[i]
 
-    sub_sorted_count_list = sorted_counts[best_interval[0]:best_interval[1]]
+    sub_sorted_count_list = sorted_counts_partition[best_interval[0]:best_interval[1]]
 
-    find_best_frequency(words, true_labels, sub_sorted_count_list, counts)
+    return find_best_frequency(words, true_labels, sub_sorted_count_list, counts_dict)
 
 
 def get_middle_value(starting, ending, list_intervals):
@@ -195,7 +195,7 @@ def get_frequency_predicted_labels(thresh, words, word_counts):
             predicted_labels.append(0)
             continue
 
-        frequency_condition = word_counts[word] > thresh
+        frequency_condition = word_counts[word] < thresh
         predicted_labels.append(int(frequency_condition))
 
     return predicted_labels
@@ -214,18 +214,12 @@ def naive_bayes(training_file, development_file, counts):
     development_words, development_true_labels = load_file(development_file)
 
 
-
-    training_x,training_y = get_train_list(training_words)
-
-    clf.fit(training_x, training_y)
-
-def get_train_list(training_words,labels):
+    # clf.fit(training_x, training_y)
 
 
 
 
 ### 3.2: Logistic Regression
-
 def logistic_regression(training_file, development_file, counts):
     """Train a Logistic Regression classifier using length and frequency
     features. Print out evaluation results on the training and
@@ -280,12 +274,12 @@ def classifiers(training_file, development_file, counts):
 
 
 if __name__ == "__main__":
-    training_file = "./complex_words_training.txt"
-    development_file = "./complex_words_development.txt"
-    test_file = "./complex_words_test_unlabeled.txt"
+    training_file = "/var/csc483/data/complex_words_training.txt"
+    development_file = "/var/csc483/data/complex_words_development.txt"
+    test_file = "/var/csc483/data/complex_words_test_unlabeled.txt"
 
     print("Loading ngram counts ...")
-    ngram_counts_file = "./ngram_counts.txt.gz"
+    ngram_counts_file = "/var/csc483/ngram_counts.txt.gz"
     counts = load_ngram_counts(ngram_counts_file)
 
     baselines(training_file, development_file, counts)
