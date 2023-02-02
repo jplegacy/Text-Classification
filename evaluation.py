@@ -66,7 +66,7 @@ def get_recall(y_pred, y_true):
         if corresponding_true_label and label:
             true_positives += 1
             continue
-        elif not corresponding_true_label and label:
+        elif corresponding_true_label and not label:
             false_negatives += 1
             continue
 
