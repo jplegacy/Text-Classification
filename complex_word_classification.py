@@ -53,49 +53,53 @@ def all_complex(data_file):
 def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
+
     # Train Data
     train_words, training_true_labels = load_file(training_file)
 
-    best_thresh, training_pred_labels = find_best_length_thresh(train_words, training_true_labels)
+    best_training_thresh, training_pred_labels = find_best_length_thresh(train_words, training_true_labels)
 
     evaluate(training_pred_labels, training_true_labels)
 
     # Development Data
     development_words, dev_true_labels = load_file(development_file)
 
-    development_pred_labels = []
-    for word in development_words:
-        development_pred_labels.append(int(len(word) > best_thresh))
-    evaluate(development_pred_labels, dev_true_labels)
+    word_len_features = get_length_features(development_words)
+    dev_pred_labels = [evaluate_freq_feature(word_length, best_training_thresh) for word_length in word_len_features]
 
-    return best_thresh, training_pred_labels, development_pred_labels
+    evaluate(dev_pred_labels, dev_true_labels)
+
 
 
 def find_best_length_thresh(wordset, label_set):
-    word_sized_labels = {}
+    word_len_features = get_length_features(wordset)
+    all_unique_lengths = set(word_len_features)
 
     best_fscore = 0
     best_thresh = 0
+    best_thresh_labels = []
 
-    # Loop creates data structure to store each word-size and there respective labels
-    for word in wordset:
-        if len(word) not in word_sized_labels.keys():
-            word_sized_labels[len(word)] = []
+    for length in all_unique_lengths:
+        predicted_labels = [evaluate_freq_feature(word_length, length) for word_length in word_len_features]
 
-    for word_size in word_sized_labels.keys():
-        for word in wordset:
-            length_condition = len(word) > word_size
-            word_sized_labels[word_size].append(int(length_condition))
-
-        predicted_labels = word_sized_labels[word_size]
         fscore = get_fscore(predicted_labels, label_set)
         if fscore > best_fscore:
             best_fscore = fscore
-            best_thresh = word_size
-    return best_thresh, word_sized_labels[best_thresh]
+            best_thresh = length
+            best_thresh_labels = predicted_labels
+
+    return best_thresh, best_thresh_labels
 
 
-### 2.3: Word frequen  cy thresholding
+def evaluate_length_feature(word_length, thresh):
+    return int(word_length > thresh)
+
+
+def get_length_features(words):
+    return [len(word) for word in words]
+
+
+# 2.3: Word frequency thresholding
 
 def load_ngram_counts(ngram_counts_file):
     """Load Google NGram counts (i.e. frequency counts for words in a
@@ -117,28 +121,24 @@ def word_frequency_threshold(training_file, development_file, counts):
     threshold to classify the training and development data. Print out
     evaluation results.
     """
+    sorted_counts = sort_all_count_values(counts)
 
-    words, training_true_labels = load_file(training_file)
-    sorted_counts = sorted_word_counts(counts)
+    # Training Data
+    training_words, training_true_labels = load_file(training_file)
 
-    best_thresh = find_best_frequency(words, training_true_labels, sorted_counts, counts)
-    print("Best Thresh for x ", best_thresh )
-    training_pred_labels = get_frequency_predicted_labels(best_thresh, words, counts)
+    best_training_thresh = find_best_frequency(training_words, training_true_labels, sorted_counts, counts)
 
-    # best_thresh = 44
-    # training_pred_labels = get_frequency_predicted_labels(best_thresh, words, counts)
-
+    training_pred_labels = get_frequency_predicted_labels(best_training_thresh, training_words, counts)
     evaluate(training_pred_labels, training_true_labels)
 
     # Development Data
     development_words, dev_true_labels = load_file(development_file)
-    development_pred_labels = get_frequency_predicted_labels(best_thresh, development_words, counts)
+
+    development_pred_labels = get_frequency_predicted_labels(best_training_thresh, development_words, counts)
     evaluate(development_pred_labels, dev_true_labels)
 
-    return best_thresh, training_pred_labels, development_pred_labels
 
-
-def sorted_word_counts(counts):
+def sort_all_count_values(counts):
     word_counts = set()
     for pair in counts.items():
         word_counts.add(pair[1])  # Grabs the Count within the KV pairs
@@ -186,22 +186,43 @@ def get_middle_value(starting, ending, list_intervals):
 
 
 def get_frequency_predicted_labels(thresh, words, word_counts):
-    predicted_labels = []
-    for word in words:
-        if word_counts[word] is None:
-            predicted_labels.append(0)
-            continue
-        if thresh is None:
-            predicted_labels.append(0)
-            continue
-
-        frequency_condition = word_counts[word] < thresh
-        predicted_labels.append(int(frequency_condition))
+    frequency_features = get_frequency_features(words, word_counts)
+    predicted_labels = [evaluate_freq_feature(feature, thresh) for feature in frequency_features]
 
     return predicted_labels
 
 
-### 3.1: Naive Bayes
+def evaluate_freq_feature(feature, thresh):
+    return int(feature < thresh)
+
+
+def get_frequency_features(words, word_count_dict):
+    return [word_count_dict[word] for word in words]
+
+
+def get_wordset_features_n_labels(wordset_file, counts):
+    wordset, wordset_true_labels = load_file(training_file)
+
+    words_freq_features = get_frequency_features(wordset, counts)
+    words_len_features = get_length_features(wordset)
+
+    wordset_features = np.array([words_freq_features, words_len_features]).T
+
+    return wordset_features, wordset_true_labels
+
+def normalize(feature_matrix):
+    return (feature_matrix - feature_matrix.mean(axis=0))/feature_matrix.std(axis=0)
+
+def get_train_and_dev_sets(train_file, dev_file, counts):
+    train_features, train_labels = get_wordset_features_n_labels(train_file,counts)
+
+    normalized_train_features = normalize(train_features)
+
+    dev_features, dev_labels = get_wordset_features_n_labels(dev_file, counts)
+
+    return normalized_train_features, train_labels, dev_features, dev_labels
+
+# 3.1: Naive Bayes
 def naive_bayes(training_file, development_file, counts):
     """Train a Naive Bayes classifier using length and frequency
     features. Print out evaluation results on the training and
@@ -210,13 +231,13 @@ def naive_bayes(training_file, development_file, counts):
     from sklearn.naive_bayes import GaussianNB
     clf = GaussianNB()
 
-    training_words, training_true_labels = load_file(training_file)
-    development_words, development_true_labels = load_file(development_file)
+    train_f, train_l, dev_f, dev_l = get_train_and_dev_sets(training_file, development_file,counts)
 
+    clf.fit(train_f, train_l)
 
-    # clf.fit(training_x, training_y)
+    dev_l_predicted = clf.predict(dev_f)
 
-
+    evaluate(dev_l_predicted, dev_l)
 
 
 ### 3.2: Logistic Regression
@@ -225,8 +246,16 @@ def logistic_regression(training_file, development_file, counts):
     features. Print out evaluation results on the training and
     development data.
     """
-    ## YOUR CODE HERE
-    pass
+    from sklearn.linear_model import LogisticRegression
+    clf = LogisticRegression()
+
+    train_f, train_l, dev_f, dev_l = get_train_and_dev_sets(training_file, development_file,counts)
+
+    clf.fit(train_f, train_l)
+
+    dev_l_predicted = clf.predict(dev_f)
+
+    evaluate(dev_l_predicted, dev_l)
 
 
 ### 3.3: Build your own classifier

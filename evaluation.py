@@ -37,12 +37,12 @@ def get_precision(y_pred, y_true):
     false_positives = 0
 
     for index, label in enumerate(y_pred):
-        corresponding_label = y_true[index]
+        corresponding_true_label = y_true[index]
 
-        if corresponding_label and label:
+        if corresponding_true_label and label:
             true_positives += 1
             continue
-        elif not corresponding_label and not false_positives:
+        elif not corresponding_true_label and label:
             false_positives += 1
             continue
 
@@ -61,12 +61,12 @@ def get_recall(y_pred, y_true):
     false_negatives = 0
 
     for index, label in enumerate(y_pred):
-        corresponding_label = y_true[index]
+        corresponding_true_label = y_true[index]
 
-        if corresponding_label and label:
+        if corresponding_true_label and label:
             true_positives += 1
             continue
-        elif corresponding_label and not false_negatives:
+        elif not corresponding_true_label and label:
             false_negatives += 1
             continue
 
