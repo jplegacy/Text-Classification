@@ -19,6 +19,7 @@ from nltk.corpus import wordnet as wn
 
 from evaluation import get_fscore, evaluate
 
+
 def load_file(data_file):
     """Load in the words and labels from the given file."""
     words = []
@@ -49,24 +50,26 @@ def all_complex(data_file):
 
 
 ### 2.2: Word length thresholding
-
 def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
     # Train Data
     train_words, true_labels = load_file(training_file)
 
-    best_thresh, best_sized_label_set = find_best_length_thresh(train_words, true_labels)
+    best_thresh, training_features = find_best_length_thresh(train_words, true_labels)
 
-    evaluate(best_sized_label_set, true_labels)
+    evaluate(training_features, true_labels)
 
     # Development Data
     development_words, true_labels = load_file(development_file)
 
-    predicted_labels = []
+    development_features = []
     for word in development_words:
-        predicted_labels.append(int(len(word) > best_thresh))
-    evaluate(predicted_labels, true_labels)
+        development_features.append(int(len(word) > best_thresh))
+    evaluate(development_features, true_labels)
+
+    return best_thresh, training_features, development_features
+
 
 def find_best_length_thresh(wordset, label_set):
     word_sized_labels = {}
@@ -101,12 +104,13 @@ def load_ngram_counts(ngram_counts_file):
     """
 
     counts = defaultdict(int)
-    with gzip.open(ngram_counts_file, 'rt') as f:
+    with gzip.open(ngram_counts_file, 'rt', encoding="utf8") as f:
         for line in f:
             token, count = line.strip().split('\t')
             if token[0].islower():
                 counts[token] = int(count)
     return counts
+
 
 def word_frequency_threshold(training_file, development_file, counts):
     """Find the best frequency threshold by f-score and use this
@@ -121,24 +125,25 @@ def word_frequency_threshold(training_file, development_file, counts):
     # predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
 
     best_thresh = 44
-    predicted_labels = get_frequency_predicted_labels(best_thresh, words, counts)
+    training_features = get_frequency_predicted_labels(best_thresh, words, counts)
 
-    evaluate(predicted_labels, true_labels)
+    evaluate(training_features, true_labels)
 
     # Development Data
     development_words, true_labels = load_file(development_file)
-    predicted_labels = get_frequency_predicted_labels(best_thresh,development_words,counts)
-    evaluate(predicted_labels, true_labels)
+    development_features = get_frequency_predicted_labels(best_thresh, development_words, counts)
+    evaluate(development_features, true_labels)
 
+    return best_thresh,training_features,development_features
 
 
 def sorted_word_counts(counts):
-
     word_counts = set()
     for pair in counts.items():
-        word_counts.add(pair[1]) # Grabs the Count within the KV pairs
+        word_counts.add(pair[1])  # Grabs the Count within the KV pairs
 
     return sorted(word_counts)
+
 
 def find_best_frequency(words, true_labels, sorted_counts, counts):
     PARTITION_CONSTANT = 5
@@ -149,7 +154,7 @@ def find_best_frequency(words, true_labels, sorted_counts, counts):
 
         return best_thresh
 
-    partition_step_size = int(len(sorted_counts)/PARTITION_CONSTANT)
+    partition_step_size = int(len(sorted_counts) / PARTITION_CONSTANT)
 
     # Gets partition intervals to split up sorted counts list
     partition_intervals = []
@@ -195,8 +200,8 @@ def get_frequency_predicted_labels(thresh, words, word_counts):
 
     return predicted_labels
 
-### 3.1: Naive Bayes
 
+### 3.1: Naive Bayes
 def naive_bayes(training_file, development_file, counts):
     """Train a Naive Bayes classifier using length and frequency
     features. Print out evaluation results on the training and
@@ -204,7 +209,19 @@ def naive_bayes(training_file, development_file, counts):
     """
     from sklearn.naive_bayes import GaussianNB
     clf = GaussianNB()
-    clf.fit(train_x, train_y)
+
+    training_words, training_true_labels = load_file(training_file)
+    development_words, development_true_labels = load_file(development_file)
+
+
+
+    training_x,training_y = get_train_list(training_words)
+
+    clf.fit(training_x, training_y)
+
+def get_train_list(training_words,labels):
+
+
 
 
 ### 3.2: Logistic Regression
@@ -245,6 +262,7 @@ def baselines(training_file, development_file, counts):
     print("min ngram counts:", min(counts.values()))
     word_frequency_threshold(training_file, development_file, counts)
 
+
 def classifiers(training_file, development_file, counts):
     print("\n========== Classifiers ===========\n")
 
@@ -260,13 +278,14 @@ def classifiers(training_file, development_file, counts):
     print("-----------")
     my_classifier(training_file, development_file, counts)
 
+
 if __name__ == "__main__":
-    training_file = "/var/csc483/data/complex_words_training.txt"
-    development_file = "/var/csc483/data/complex_words_development.txt"
-    test_file = "/var/csc483/data/complex_words_test_unlabeled.txt"
+    training_file = "./complex_words_training.txt"
+    development_file = "./complex_words_development.txt"
+    test_file = "./complex_words_test_unlabeled.txt"
 
     print("Loading ngram counts ...")
-    ngram_counts_file = "/var/csc483/ngram_counts.txt.gz"
+    ngram_counts_file = "./ngram_counts.txt.gz"
     counts = load_ngram_counts(ngram_counts_file)
 
     baselines(training_file, development_file, counts)
@@ -276,4 +295,3 @@ if __name__ == "__main__":
     # Train your best classifier, predict labels for the test dataset and write
     # the predicted labels to the text file 'test_labels.txt', with ONE LABEL
     # PER LINE
-

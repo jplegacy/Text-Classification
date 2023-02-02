@@ -33,8 +33,12 @@ def create_training_and_dev_sets():
     # 1 if the word appears in a review and 0 if it doesn't (i.e. binary naive Bayes)
     training_word_counts = Counter([w.lower() for review in training_reviews for w in review])
     vocab = [word_count[0] for word_count in training_word_counts.most_common(2000)]
+
+
     training_x = np.array([create_features(r, vocab) for r in training_reviews])
     dev_x = np.array([create_features(r, vocab) for r in dev_reviews])
+
+
     training_y = np.array([labels[i] for i in range(len(labels)) if i not in dev_selection])
     dev_y = np.array([labels[i] for i in dev_selection])
     return training_x, training_y, dev_x, dev_y
