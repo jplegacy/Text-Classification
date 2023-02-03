@@ -103,4 +103,3 @@ def evaluate(y_pred, y_true):
 
     for metric in scores:
         print(metric[0] + ": " + str(metric[1] * 100) + "%")
-

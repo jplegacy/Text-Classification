@@ -35,7 +35,7 @@ def load_file(data_file):
     return words, labels
 
 
-### 2.1: A very simple baseline
+################################################# 2.1: A very simple baseline
 
 def all_complex(data_file):
     """Label every word as complex. Evaluate performance on given data set. Print out
@@ -49,7 +49,7 @@ def all_complex(data_file):
     evaluate(evaluated_labels, true_labels)
 
 
-### 2.2: Word length thresholding
+################################################## 2.2: Word length thresholding
 def word_length_threshold(training_file, development_file):
     """Find the best length threshold by f-score and use this threshold to classify
     the training and development data. Print out evaluation results."""
@@ -69,7 +69,9 @@ def word_length_threshold(training_file, development_file):
 
     evaluate(dev_pred_labels, dev_true_labels)
 
+    print("Best length threshold was ", best_training_thresh)
 
+    return best_training_thresh
 
 def find_best_length_thresh(wordset, label_set):
     word_len_features = get_length_features(wordset)
@@ -92,14 +94,14 @@ def find_best_length_thresh(wordset, label_set):
 
 
 def evaluate_length_feature(word_length, thresh):
-    return int(word_length > thresh)
+    return int(word_length >= thresh)
 
 
 def get_length_features(words):
     return [len(word) for word in words]
 
 
-# 2.3: Word frequency thresholding
+############################################ 2.3: Word frequency thresholding
 
 def load_ngram_counts(ngram_counts_file):
     """Load Google NGram counts (i.e. frequency counts for words in a
@@ -136,6 +138,8 @@ def word_frequency_threshold(training_file, development_file, counts):
 
     development_pred_labels = get_frequency_predicted_labels(best_training_thresh, development_words, counts)
     evaluate(development_pred_labels, dev_true_labels)
+    print("Best frequency threshold was ", best_training_thresh)
+    return best_training_thresh
 
 
 def sort_all_count_values(counts):
@@ -143,11 +147,12 @@ def sort_all_count_values(counts):
     for pair in counts.items():
         word_counts.add(pair[1])  # Grabs the Count within the KV pairs
 
+    print(len(word_counts))
     return sorted(word_counts)
 
 
 def find_best_frequency(words, true_labels, sorted_counts_partition, counts_dict):
-    PARTITION_CONSTANT = 5
+    PARTITION_CONSTANT = 1500
 
     # Base Case
     if len(sorted_counts_partition) <= PARTITION_CONSTANT:
@@ -201,7 +206,7 @@ def get_frequency_features(words, word_count_dict):
 
 
 def get_wordset_features_n_labels(wordset_file, counts):
-    wordset, wordset_true_labels = load_file(training_file)
+    wordset, wordset_true_labels = load_file(wordset_file)
 
     words_freq_features = get_frequency_features(wordset, counts)
     words_len_features = get_length_features(wordset)
@@ -210,8 +215,10 @@ def get_wordset_features_n_labels(wordset_file, counts):
 
     return wordset_features, wordset_true_labels
 
+
 def normalize(feature_matrix):
     return (feature_matrix - feature_matrix.mean(axis=0))/feature_matrix.std(axis=0)
+
 
 def get_train_and_dev_sets(train_file, dev_file, counts):
     train_features, train_labels = get_wordset_features_n_labels(train_file,counts)
@@ -219,10 +226,11 @@ def get_train_and_dev_sets(train_file, dev_file, counts):
     normalized_train_features = normalize(train_features)
 
     dev_features, dev_labels = get_wordset_features_n_labels(dev_file, counts)
+    normalized_dev_features = normalize(dev_features)
 
-    return normalized_train_features, train_labels, dev_features, dev_labels
+    return normalized_train_features, train_labels, normalized_dev_features, dev_labels
 
-# 3.1: Naive Bayes
+################################################################# 3.1: Naive Bayes
 def naive_bayes(training_file, development_file, counts):
     """Train a Naive Bayes classifier using length and frequency
     features. Print out evaluation results on the training and
@@ -231,9 +239,14 @@ def naive_bayes(training_file, development_file, counts):
     from sklearn.naive_bayes import GaussianNB
     clf = GaussianNB()
 
-    train_f, train_l, dev_f, dev_l = get_train_and_dev_sets(training_file, development_file,counts)
+    train_f, train_l, dev_f, dev_l = my_classifyer_train_and_dev_sets(training_file, development_file, counts)
 
     clf.fit(train_f, train_l)
+
+    train_l_predicted = clf.predict(train_f)
+
+    evaluate(train_l_predicted, train_l)
+
 
     dev_l_predicted = clf.predict(dev_f)
 
@@ -247,11 +260,15 @@ def logistic_regression(training_file, development_file, counts):
     development data.
     """
     from sklearn.linear_model import LogisticRegression
-    clf = LogisticRegression()
+    clf = LogisticRegression(random_state=0)
 
-    train_f, train_l, dev_f, dev_l = get_train_and_dev_sets(training_file, development_file,counts)
+    train_f, train_l, dev_f, dev_l = my_classifyer_train_and_dev_sets(training_file, development_file, counts)
 
     clf.fit(train_f, train_l)
+
+    train_l_predicted = clf.predict(train_f)
+
+    evaluate(train_l_predicted, train_l)
 
     dev_l_predicted = clf.predict(dev_f)
 
@@ -259,10 +276,29 @@ def logistic_regression(training_file, development_file, counts):
 
 
 ### 3.3: Build your own classifier
+def my_classifyer_train_and_dev_sets(train_file, dev_file, counts):
+    train_features, train_labels = get_wordset_features_n_labels(train_file,counts)
+
+    normalized_train_features = (train_features)
+
+    dev_features, dev_labels = get_wordset_features_n_labels(dev_file, counts)
+    normalized_dev_features = (dev_features)
+
+    return normalized_train_features, train_labels, normalized_dev_features, dev_labels
+
 
 def my_classifier(training_file, development_file, counts):
-    ## YOUR CODE HERE
-    pass
+
+    from sklearn.ensemble import RandomForestClassifier
+    clf = RandomForestClassifier()
+
+    train_f, train_l, dev_f, dev_l = my_classifyer_train_and_dev_sets(training_file, development_file, counts)
+
+    clf.fit(train_f, train_l)
+
+    dev_l_predicted = clf.predict(dev_f)
+
+    evaluate(dev_l_predicted, dev_l)
 
 
 def baselines(training_file, development_file, counts):
@@ -313,8 +349,3 @@ if __name__ == "__main__":
 
     baselines(training_file, development_file, counts)
     classifiers(training_file, development_file, counts)
-
-    ## YOUR CODE HERE
-    # Train your best classifier, predict labels for the test dataset and write
-    # the predicted labels to the text file 'test_labels.txt', with ONE LABEL
-    # PER LINE
